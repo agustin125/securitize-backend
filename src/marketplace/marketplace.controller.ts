@@ -10,8 +10,9 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service';
 import { ListItemDto } from './dto/list-item.dto';
 import { PurchaseItemDto } from './dto/purchase-item.dto';
-import { TransferItemDto } from './dto/transfer-item.dto';
+import { WithdrawItemDto } from './dto/withdraw-item.dto';
 import { ethers } from 'ethers';
+import { ResponseDto } from './dto/response-item.dto';
 
 @ApiTags('Marketplace')
 @Controller('marketplace')
@@ -33,25 +34,25 @@ export class MarketplaceController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Item listed successfully',
+    type: ResponseDto,
   })
   @Post('list')
   @HttpCode(HttpStatus.CREATED)
-  async listItem(@Body() listItemDto: ListItemDto) {
-    return await this.marketplaceService.listItem(
-      listItemDto.token,
-      listItemDto.amount,
-      listItemDto.price,
-    );
+  async listItem(@Body() listItemDto: ListItemDto): Promise<ResponseDto> {
+    return await this.marketplaceService.listItem(listItemDto);
   }
 
   @ApiOperation({ summary: 'Purchase an item' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Item purchased successfully',
+    type: ResponseDto,
   })
   @Post('purchase')
   @HttpCode(HttpStatus.OK)
-  async purchaseItem(@Body() purchaseItemDto: PurchaseItemDto) {
+  async purchaseItem(
+    @Body() purchaseItemDto: PurchaseItemDto,
+  ): Promise<ResponseDto> {
     return await this.marketplaceService.purchaseItem(
       purchaseItemDto.listingId,
       ethers.parseUnits(purchaseItemDto.value, 18),
@@ -62,28 +63,13 @@ export class MarketplaceController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Funds withdrawn successfully',
+    type: ResponseDto,
   })
   @Post('withdraw')
   @HttpCode(HttpStatus.OK)
-  async withdrawFunds() {
-    return await this.marketplaceService.withdrawFunds();
-  }
-
-  @ApiOperation({ summary: 'Transfer tokens with a signed message' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Tokens transferred successfully',
-  })
-  @Post('transfer')
-  @HttpCode(HttpStatus.OK)
-  async transferWithSignature(@Body() transferItemDto: TransferItemDto) {
-    return await this.marketplaceService.transferWithSignature(
-      transferItemDto.token,
-      transferItemDto.from,
-      transferItemDto.to,
-      transferItemDto.amount,
-      transferItemDto.nonce,
-      transferItemDto.signature,
-    );
+  async withdrawFunds(
+    @Body() withdrawItemDto: WithdrawItemDto,
+  ): Promise<ResponseDto> {
+    return await this.marketplaceService.withdrawFunds(withdrawItemDto);
   }
 }

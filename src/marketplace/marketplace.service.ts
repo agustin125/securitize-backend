@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ethers, BigNumberish } from 'ethers';
 import abi from '../../ABIs/marketplace.json';
+import { ListItemDto } from './dto/list-item.dto';
+import { WithdrawItemDto } from './dto/withdraw-item.dto';
+import { ResponseDto } from './dto/response-item.dto';
 
 @Injectable()
 export class MarketplaceService {
@@ -32,62 +35,92 @@ export class MarketplaceService {
     return listings;
   }
 
-  async listItem(token: string, amount: number, price: number): Promise<any> {
-    return await this.contract.listItem(token, amount, price);
+  async listItem(listItemDto: ListItemDto): Promise<any> {
+    const { token, amount, price, nonce, signature, signer } = listItemDto;
+    if (!signature) {
+      const unsignedTx = await this.contract.listItem.populateTransaction(
+        token,
+        amount,
+        price,
+        nonce,
+      );
+
+      return this.mapResponse(
+        unsignedTx,
+        'Please sign this transaction with your wallet to withdraw your funds.',
+      );
+    }
+
+    const recoveredAddress = ethers.verifyMessage(
+      JSON.stringify({ token, amount, price, nonce }),
+      signature,
+    );
+
+    if (recoveredAddress.toLowerCase() !== signer.toLowerCase()) {
+      throw new Error('Signature validation failed. Invalid signer.');
+    }
+
+    await this.contract.listItem(
+      token,
+      amount,
+      price,
+      nonce,
+      signature,
+      signer,
+    );
+
+    return this.mapResponse(null, 'Item listed successfully.');
   }
 
   async purchaseItem(listingId: number, value: BigNumberish): Promise<any> {
-    return await this.contract.purchaseItem(listingId, { value });
-  }
+    if (!Number.isInteger(listingId) || listingId < 0) {
+      throw new Error('Invalid listingId. It must be a non-negative integer.');
+    }
 
-  async withdrawFunds(): Promise<any> {
-    return await this.contract.withdrawFunds();
-  }
+    if (BigInt(value) <= 0n) {
+      throw new Error('Invalid value. It must be a positive number.');
+    }
 
-  async transferWithSignature(
-    token: string,
-    from: string,
-    to: string,
-    amount: number,
-    nonce: number,
-    signature: string,
-  ): Promise<any> {
-    return await this.contract.transferWithSignature(
-      token,
-      from,
-      to,
-      amount,
-      nonce,
-      signature,
+    const listing = await this.contract.listings(listingId);
+    if (!listing || listing.amount === 0n) {
+      throw new Error(
+        `Listing with ID ${listingId} does not exist or is sold out.`,
+      );
+    }
+
+    const unsignedTx = await this.contract.purchaseItem.populateTransaction(
+      listingId,
+      {
+        value,
+      },
+    );
+
+    return this.mapResponse(
+      unsignedTx,
+      'Please sign this transaction with your wallet to withdraw your funds.',
     );
   }
 
-  async getEarnings(address: string): Promise<ethers.BigNumberish> {
-    return await this.contract.earnings(address);
+  async withdrawFunds(withdrawItemDto: WithdrawItemDto): Promise<ResponseDto> {
+    const earnings = await this.contract.earnings(
+      withdrawItemDto.signerAddress,
+    );
+
+    if (BigInt(earnings) <= 0n) {
+      throw new Error('No funds available to withdraw.');
+    }
+
+    const unsignedTx = await this.contract.withdrawFunds.populateTransaction();
+    return this.mapResponse(
+      unsignedTx,
+      'Please sign this transaction with your wallet to withdraw your funds.',
+    );
   }
 
-  async signMessage(data: object): Promise<string> {
-    const domain = {
-      name: 'YourAppName',
-      version: '1',
-      chainId: await this.provider
-        .getNetwork()
-        .then((network) => network.chainId),
-      verifyingContract: process.env.CONTRACT_ADDRESS,
-    };
-
-    const types = {
-      Message: [{ name: 'data', type: 'string' }],
-    };
-
-    return this.wallet.signTypedData(domain, types, data);
-  }
-
-  async pushSignedTransaction(signedMessage: string): Promise<any> {
-    const tx = await this.wallet.sendTransaction({
-      to: process.env.CONTRACT_ADDRESS,
-      data: signedMessage,
-    });
-    return tx.wait();
+  private mapResponse(
+    unsignedTx: ethers.ContractTransaction | null,
+    message: string,
+  ): ResponseDto | PromiseLike<ResponseDto> {
+    return new ResponseDto(unsignedTx, message);
   }
 }

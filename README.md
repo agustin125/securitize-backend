@@ -27,7 +27,7 @@ $ npm install
 $ npm run start
 ```
 
-http://localhost:3000/api-docs
+http://localhost:3001/api-docs
 
 
 ## Compile and run the project
