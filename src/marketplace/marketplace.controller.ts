@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service';
+import { ListItemBehalfDto } from './dto/list-item-behalf.dto';
 import { ListItemDto } from './dto/list-item.dto';
 import { PurchaseItemDto } from './dto/purchase-item.dto';
 import { WithdrawItemDto } from './dto/withdraw-item.dto';
@@ -38,8 +39,16 @@ export class MarketplaceController {
   })
   @Post('list')
   @HttpCode(HttpStatus.CREATED)
-  async listItem(@Body() listItemDto: ListItemDto): Promise<ResponseDto> {
+  async listItem(@Body() listItemDto: ListItemDto): Promise<ResponseDto[]> {
     return await this.marketplaceService.listItem(listItemDto);
+  }
+
+  @Post('listBehalf')
+  @HttpCode(HttpStatus.CREATED)
+  async listItemBehalf(
+    @Body() listItemDto: ListItemBehalfDto,
+  ): Promise<ResponseDto> {
+    return await this.marketplaceService.listItemBehalf(listItemDto);
   }
 
   @ApiOperation({ summary: 'Purchase an item' })

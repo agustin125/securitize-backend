@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ListItemDto {
+export class ListItemBehalfDto {
   @ApiProperty({
     description: 'Token address of the item',
     example: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
@@ -12,6 +12,12 @@ export class ListItemDto {
 
   @ApiProperty({ description: 'Price of the item in wei', example: 2 })
   price: number;
+
+  @ApiProperty({
+    description: 'Signature of the item',
+    example: '0xe7f1725E7734CE288F8367e1Bb...',
+  })
+  signature: string;
 
   @ApiProperty({ description: 'address client' })
   address: string;

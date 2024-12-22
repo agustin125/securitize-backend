@@ -48,22 +48,6 @@
     "type": "error"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "length",
-        "type": "uint256"
-      }
-    ],
-    "name": "StringsInsufficientHexLength",
-    "type": "error"
-  },
-  {
     "anonymous": false,
     "inputs": [],
     "name": "EIP712DomainChanged",
@@ -234,10 +218,28 @@
         "internalType": "uint256",
         "name": "price",
         "type": "uint256"
+      }
+    ],
+    "name": "listItem",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "nonce",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "price",
         "type": "uint256"
       },
       {
@@ -251,7 +253,7 @@
         "type": "address"
       }
     ],
-    "name": "listItem",
+    "name": "listItemBehalf",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -297,25 +299,6 @@
       {
         "internalType": "uint256",
         "name": "price",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "nonces",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
         "type": "uint256"
       }
     ],
