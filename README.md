@@ -11,6 +11,12 @@ This is a backend service for a decentralized marketplace built using **NestJS**
 - **Withdraw Funds:** Withdraw accumulated earnings.
 - **Token Transfers:** Handle token transfers using signed messages (EIP-712).
 
+## Screenshots
+
+![init](./images/init.png)
+![get_all](./images/get_all.png)
+![list](./images/list.png)
+
 
 
 ## Project setup
@@ -37,21 +43,6 @@ http://localhost:3001/api-docs
 $ npm run start
 
 # watch mode
-$ npm run start:dev
+$ npm run start:debug
 
-# production mode
-$ npm run start:prod
-```
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```

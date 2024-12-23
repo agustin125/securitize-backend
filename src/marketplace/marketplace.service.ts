@@ -6,6 +6,7 @@ import { ListItemBehalfDto } from './dto/list-item-behalf.dto';
 import { ListItemDto } from './dto/list-item.dto';
 import { WithdrawItemDto } from './dto/withdraw-item.dto';
 import { ResponseDto } from './dto/response-item.dto';
+import { ListingsResponseDto } from './dto/listing-response-item.dto';
 
 @Injectable()
 export class MarketplaceService {
@@ -23,17 +24,26 @@ export class MarketplaceService {
     this.contract = new ethers.Contract(contractAddress, abi, this.wallet);
   }
 
-  async getListings(): Promise<any[]> {
+  async getListings(): Promise<ListingsResponseDto[]> {
     const listingCount = await this.contract.listingIdCounter();
-    const listings = [];
+    const listings: ListingsResponseDto[] = [];
+
     for (let i = 0; i < listingCount; i++) {
       try {
         const listing = await this.contract.listings(i);
-        listings.push(listing);
+        const formattedListing = new ListingsResponseDto(
+          listing.seller,
+          listing.token,
+          listing.amount,
+          listing.price,
+        );
+
+        listings.push(formattedListing);
       } catch {
-        // if ID not exists, skip
+        // if ID does not exist, skip
       }
     }
+
     return listings;
   }
 
@@ -42,35 +52,48 @@ export class MarketplaceService {
     const tokenContract = new ethers.Contract(token, abiToken, this.wallet);
     const spenderAddress = this.contract.target;
     const responses: ResponseDto[] = [];
+    const scaledAmount = await this.getTokenAmount(tokenContract, amount);
 
     await this.checkNeedAllowance(
       tokenContract,
       address,
       spenderAddress,
-      amount,
+      scaledAmount,
       responses,
     );
 
+    const priceEth = ethers.parseEther(price.toString());
     const unsignedTx = await this.contract.listItem.populateTransaction(
       token,
-      amount,
-      price,
+      scaledAmount,
+      priceEth,
     );
 
     responses.push(
       this.mapResponse(
         unsignedTx,
-        'Please sign this transaction with your wallet to withdraw your funds.',
+        'Please sign this listItem transaction with your wallet.',
       ),
     );
 
     return responses;
   }
 
-  async listItemBehalf(listItemDto: ListItemBehalfDto): Promise<ResponseDto> {
+  private async getTokenAmount(
+    tokenContract: ethers.Contract,
+    amount: number,
+  ): Promise<bigint> {
+    const decimals = await tokenContract.decimals();
+    const scaleFactor = BigInt(10) ** BigInt(decimals);
+    const scaledAmount = BigInt(amount) * scaleFactor;
+    return scaledAmount;
+  }
+
+  async listItemBehalf(listItemDto: ListItemBehalfDto): Promise<ResponseDto[]> {
     const { token, amount, price, signature, address } = listItemDto;
 
     const tokenContract = new ethers.Contract(token, abiToken, this.wallet);
+    const scaledAmount = await this.getTokenAmount(tokenContract, amount);
     const spenderAddress = this.contract.target;
     const responses: ResponseDto[] = [];
     if (
@@ -78,37 +101,39 @@ export class MarketplaceService {
         tokenContract,
         address,
         spenderAddress,
-        amount,
+        scaledAmount,
         responses,
       )
     ) {
-      return responses[0];
+      return responses;
     }
 
     const txResponse = await this.contract.listItemBehalf(
       token,
-      amount,
+      scaledAmount,
       price,
       signature,
       address,
     );
     const receipt = await txResponse.wait();
 
-    return this.mapResponse(
-      null,
-      `Transaction successful! Hash: ${receipt.transactionHash}`,
-    );
+    return [
+      this.mapResponse(
+        null,
+        `Transaction successful! Hash: ${receipt.transactionHash}`,
+      ),
+    ];
   }
 
   private async checkNeedAllowance(
     tokenContract: ethers.Contract,
     signer: any,
     spenderAddress: string | ethers.Addressable,
-    amount: number,
+    amount: bigint,
     responses: ResponseDto[],
   ): Promise<boolean> {
     const allowance = await tokenContract.allowance(signer, spenderAddress);
-    const needAllowance = BigInt(allowance) < BigInt(amount);
+    const needAllowance = BigInt(allowance) < amount;
     if (needAllowance) {
       const unsignedApproveTx = await tokenContract.approve.populateTransaction(
         spenderAddress,
@@ -129,7 +154,7 @@ export class MarketplaceService {
     listingId: number,
     value: BigNumberish,
   ): Promise<ResponseDto> {
-    if (!Number.isInteger(listingId) || listingId < 0) {
+    if (Number(listingId) < 0) {
       throw new Error('Invalid listingId. It must be a non-negative integer.');
     }
 
@@ -151,9 +176,12 @@ export class MarketplaceService {
       },
     );
 
+    const priceEth = ethers.parseEther(value.toString());
+    const priceEth2 = ethers.parseEther(value.toString());
     return this.mapResponse(
-      unsignedTx,
-      'Please sign this transaction with your wallet to withdraw your funds.',
+    //  unsignedTx,
+      { ...unsignedTx, value: value.toString() as any }, //TODO: improve this
+      'Please sign this transaction with your wallet to purchase item.',
     );
   }
 

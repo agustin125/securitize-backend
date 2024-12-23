@@ -47,7 +47,7 @@ export class MarketplaceController {
   @HttpCode(HttpStatus.CREATED)
   async listItemBehalf(
     @Body() listItemDto: ListItemBehalfDto,
-  ): Promise<ResponseDto> {
+  ): Promise<ResponseDto[]> {
     return await this.marketplaceService.listItemBehalf(listItemDto);
   }
 
